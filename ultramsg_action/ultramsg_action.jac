@@ -166,16 +166,21 @@ node UltramsgAction :Action: {
 
     can healthcheck() -> bool {
         try {
-            if(
+            if (
                 self.base_url and
                 self.api_key and
-                self.api_url and
-                self.instance_id and
-                self.phone_number and
-                self.webhook_url and
-                self.chunk_length > 1000
-            ){
-                return True;
+                self.api_url
+            ) {
+                response = UltramsgAPI.get_instance_status(api_url=self.api_url, api_key=self.api_key);
+                if (
+                    response and
+                    response.get("status", {}).get("accountStatus", {}).get("status") == "authenticated" and
+                    response.get("status", {}).get("accountStatus", {}).get("substatus") == "connected"
+                ) {
+                    return True;
+                }
+                self.logger.error(f"UltraMsg instance status check failed: {response}");
+                return False;
             }
             return False;
         } except Exception as e {
