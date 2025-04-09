@@ -60,7 +60,6 @@ walker ultramsg_interact :interact_graph_walker: {
 
         if( action_node := (here.get_actions().get(action_label='UltramsgAction')) ) {
 
-
             if(not action_node.enabled) {
                 Jac.get_context().status = 200;
                 disengage;
@@ -171,7 +170,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = {"label": "whatsapp_chat", "data_type": "dict", "content": data}
+                data = [{"label": "whatsapp_chat", "meta": "dict", "content": data}]
             )).message;
 
             # handle reply
@@ -210,7 +209,7 @@ walker ultramsg_interact :interact_graph_walker: {
                     reporting = False,
                     tts = True,
                     channel = "whatsapp",
-                    data = {"label": "whatsapp_voicenote", "data_type": data['message_type'], "content": data['media']}
+                    data = [{"label": "whatsapp_voicenote", "meta": data['message_type'], "content": data['media']}]
                 )).message;
             }
 
@@ -254,7 +253,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = {"label": "whatsapp_media", "data_type": "dict", "content": data}
+                data = [{"label": "whatsapp_media", "meta": "dict", "content": data}]
             )).message;
 
             # handle reply
@@ -277,7 +276,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = {"label": "whatsapp_location", "data_type": "dict", "content": data}
+                data = [{"label": "whatsapp_location", "meta": "dict", "content": data}]
             )).message;
 
             # handle reply

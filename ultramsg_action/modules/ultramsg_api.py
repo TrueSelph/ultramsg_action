@@ -3,7 +3,6 @@
 import logging
 import os
 import traceback
-import uuid
 from typing import Optional
 
 import requests
@@ -648,58 +647,10 @@ class UltramsgAPI:
         )
 
     @staticmethod
-    def api_transcribe_audio_url(
-        audio_url: str, api_url: str = "", data: Optional[dict] = None
-    ) -> dict:
-        """
-        Transcribes audio file using TS Platform.
+    def send_typing_message(phone_number: str, instance_id: str, api_key: str) -> dict:
+        """Send a typing message."""
+        data = {"token": api_key, "chatId": phone_number}
 
-        Args:
-            audio_file_path (str): The path to the audio file to transcribe.
-            api_token (str): The API token for accessing the Jivas API.
-            api_url (str): The URL of the Jivas API endpoint.
-
-        Returns:
-            dict: A dictionary containing the status, transcription result, and transcript.
-        """
-
-        # initialise variables
-        status = None
-        response = None
-        result = None
-
-        # download the audio file
-        filename = str(uuid.uuid4())
-        UltramsgAPI.download_media(audio_url, filename)
-
-        try:
-            # Define the headers for the HTTP request
-            headers: dict = {}
-
-            # prep the audio file
-            with open(filename, "rb") as audio_file:
-                files = [("audio", (filename, audio_file, "audio/mp3"))]
-
-            # delete the audio file
-            if os.path.exists(filename):
-                os.remove(filename)
-
-            response = requests.request(
-                "POST", api_url, headers=headers, data=data, files=files
-            )
-
-            # Check if request was successful
-            if response.status_code == 201:
-                result = response.json()
-                status = "success"
-            else:
-                result = {
-                    "message": f"Error: {response.status_code} - {response.reason}"
-                }
-                status = "error"
-        except Exception as e:
-            UltramsgAPI.logger.error(f"an exception occurred, {traceback.format_exc()}")
-            result = {"message": f"Error: {str(e)}"}
-            status = "error"
-
-        return {status: result}
+        return UltramsgAPI.send_rest_request(
+            url=f"https://api.ultramsg.com/{instance_id}/messages/typing", data=data
+        )
