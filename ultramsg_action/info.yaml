@@ -2,7 +2,7 @@ package:
   name: jivas/ultramsg_action
   author: V75 Inc.
   architype: UltramsgAction
-  version: 0.0.2
+  version: 0.0.3
   meta:
     title: Ultramsg Action
     description: Houses configurations per agent for whatsapp api communications provided by Ultramsg API.

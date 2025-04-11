@@ -72,7 +72,7 @@ webhook_properties = {
 
 ```python
 base_url = "https://your_base_url"
-api_key = "your_ultramsg_api_key"
+token = "your_ultramsg_token"
 instance_id = "your_instance_id"
 phone_number = "your_whatsapp_number"
 webhook_properties = {
@@ -85,7 +85,7 @@ webhook_properties = {
 ```
 
 ### Best Practices
-- Validate your API keys and webhook URLs before deployment.
+- Validate your Tokens and webhook URLs before deployment.
 - Test webhook registration in a staging environment before production use.
 
 ---
