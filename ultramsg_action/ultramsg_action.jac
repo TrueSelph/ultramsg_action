@@ -1,7 +1,7 @@
 import:py os;
 import:py traceback;
 import:py logging;
-import:py from logging { Logger }
+import:py from logging { getLogger as Logger }
 import:py from .modules.ultramsg_api { UltramsgAPI }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvserve.lib.agent_interface { AgentInterface }
@@ -14,20 +14,20 @@ node UltramsgAction :Action: {
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    has base_url:str = "";
-    has api_key:str = "";
-    has api_url:str = "";
+    has api_url:str = "https://api.ultramsg.com";
     has instance_id:str = ""; # the ultramsg instance ID
+    has token:str = ""; # the ultramsg token
     has phone_number:str = ""; # the whatsapp phone number
-    has webhook_url:str = "";
+    has base_url:str = "";  # the base url for the JIVAS instance
+    has webhook_url:str = ""; # the generated webhook url
     has webhook_properties:dict = {"send_delay": 3, "webhook_message_received": "True", "webhook_message_create": "False", "webhook_message_ack": "True", "webhook_message_download_media": "True"};
     has chunk_length:int = 3500;
     # when set, the wa push name value is used as the user name
     has use_pushname:bool = True;
     has ignore_newsletters:bool = True;
 
-
     can on_register {
+
         if (not self.base_url) {
             # default to jivas base url in environment
             self.base_url = os.environ.get('JIVAS_BASE_URL');
@@ -46,6 +46,17 @@ node UltramsgAction :Action: {
         }
     }
 
+    can api() -> UltramsgAPI {
+        # load the ultramsg api instance
+
+        return UltramsgAPI(
+            instance_id=self.instance_id,
+            token=self.token,
+            api_url=self.api_url
+        );
+
+    }
+
     can register_ultramsg_webhook() {
         # setup procedure for webhook registration on ultramsg api
 
@@ -61,15 +72,13 @@ node UltramsgAction :Action: {
             self.webhook_url = f'{self.base_url}/webhook/{webhook_key}';
             self.logger.debug(f'ultramsg webhook url: {self.webhook_url}');
 
-            result = UltramsgAPI.update_instance_settings(
+            result = self.api().update_instance_settings(
                 webhook_url=self.webhook_url,
                 send_delay=self.webhook_properties["send_delay"],
                 webhook_message_received=self.webhook_properties["webhook_message_received"],
                 webhook_message_create=self.webhook_properties["webhook_message_create"],
                 webhook_message_ack=self.webhook_properties["webhook_message_ack"],
-                webhook_message_download_media=self.webhook_properties["webhook_message_download_media"],
-                api_url=self.api_url,
-                api_key=self.api_key
+                webhook_message_download_media=self.webhook_properties["webhook_message_download_media"]
             );
 
             if('error' in result) {
@@ -102,19 +111,19 @@ node UltramsgAction :Action: {
                 outgoing = Utils.chunk_long_message(message=content, max_length = self.chunk_length, chunk_length = self.chunk_length);
 
                 for chunk in outgoing {
-                    UltramsgAPI.send_text_message(phone_number=session_id, message=chunk, api_url=self.api_url, api_key=self.api_key, msg_id=parent_message_id);
+                    self.api().send_text_message(phone_number=session_id, message=chunk, msg_id=parent_message_id);
                 }
             } elif(message.get_type() == MessageType.MEDIA.value) {
                 mime_type = Utils.get_mime_type(mime_type=message.mime);
                 if(mime_type['file_type'] == "document") {
                     content = self.sanitize_message(message = message.get_content());
-                    UltramsgAPI.send_document(phone_number= session_id, media_url=message.data.get('url'), api_url=self.api_url, api_key=self.api_key, file_name=message.data.get('file_name'), caption = content);
+                    self.api().send_document(phone_number= session_id, media_url=message.data.get('url'), file_name=message.data.get('file_name'), caption = content);
                 } elif(mime_type['file_type'] == "image") {
                     content = self.sanitize_message(message = message.get_content());
-                    UltramsgAPI.send_image(phone_number=session_id, media_url=message.data.get('url'), api_url=self.api_url, api_key=self.api_key, caption = content);
+                    self.api().send_image(phone_number=session_id, media_url=message.data.get('url'), caption = content);
                 } elif(mime_type['file_type'] == "video") {
                     content = self.sanitize_message(message = message.get_content());
-                    UltramsgAPI.send_video(phone_number=session_id, media_url=message.data.get('url'), api_url=self.api_url, api_key=self.api_key, caption = content);
+                    self.api().send_video(phone_number=session_id, media_url=message.data.get('url'), caption = content);
                 }
             } elif(message.get_type() == MessageType.MULTI.value) {
                 for message_item in message.get_content_items() {
@@ -123,17 +132,17 @@ node UltramsgAction :Action: {
                         outgoing = Utils.chunk_long_message(message=content, max_length = self.chunk_length, chunk_length = self.chunk_length);
 
                         for chunk in outgoing {
-                            UltramsgAPI.send_text_message(phone_number=session_id, message=chunk, api_url=self.api_url, api_key=self.api_key, msg_id=parent_message_id);
+                            self.api().send_text_message(phone_number=session_id, message=chunk, msg_id=parent_message_id);
                         }
                     } elif(message_item.get_type() == MessageType.MEDIA.value) {
                         mime_type = Utils.get_mime_type(mime_type=message_item.mime);
                         content = self.sanitize_message(message = message_item.get_content());
                         if(mime_type['file_type'] == "document") {
-                            UltramsgAPI.send_document(phone_number= session_id, media_url=message_item.data.get('url'), api_url=self.api_url, api_key=self.api_key, file_name=message.data.get('file_name'), caption = content);
+                            self.api().send_document(phone_number= session_id, media_url=message_item.data.get('url'), file_name=message.data.get('file_name'), caption = content);
                         } elif(mime_type['file_type'] == "image") {
-                            UltramsgAPI.send_image(phone_number=session_id, media_url= message_item.data.get('url'), api_url=self.api_url, api_key=self.api_key, caption = content);
+                            self.api().send_image(phone_number=session_id, media_url= message_item.data.get('url'), caption = content);
                         } elif(mime_type['file_type'] == "video") {
-                            UltramsgAPI.send_video(phone_number=session_id, media_url= message_item.data.get('url'), api_url=self.api_url, api_key=self.api_key, caption = content);
+                            self.api().send_video(phone_number=session_id, media_url= message_item.data.get('url'), caption = content);
                         }
                     }
                 }
@@ -147,7 +156,7 @@ node UltramsgAction :Action: {
         if(message) {
             agent_node = self.get_agent();
 
-            if(frames := agent_node.get_memory().get_frames() ) {
+            if(frames := agent_node.get_memory().get_frames()) {
                 # get all frames then proceed to broadcast
                 for frame_node in frames {
                     if(frame_node.session_id not in ignore_list) {
@@ -164,14 +173,14 @@ node UltramsgAction :Action: {
     }
 
 
-    can healthcheck() -> bool {
+    can healthcheck() -> Union[bool, dict] {
         try {
             if (
                 self.base_url and
-                self.api_key and
+                self.token and
                 self.api_url
             ) {
-                response = UltramsgAPI.get_instance_status(api_url=self.api_url, api_key=self.api_key);
+                response = self.api().get_instance_status();
                 if (
                     response and
                     response.get("status", {}).get("accountStatus", {}).get("status") == "authenticated" and
@@ -179,7 +188,6 @@ node UltramsgAction :Action: {
                 ) {
                     return True;
                 }
-                self.logger.error(f"UltraMsg instance status check failed: {response}");
                 return False;
             }
             return False;

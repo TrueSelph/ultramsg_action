@@ -7,7 +7,6 @@ import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.memory.frame { Frame }
 import:jac from jivas.agent.memory.memory { Memory }
-import:py from .modules.ultramsg_api { UltramsgAPI }
 
 walker ultramsg_interact :interact_graph_walker: {
     # called via a webhook whenever there are verification requests or inbound messages
@@ -30,9 +29,44 @@ walker ultramsg_interact :interact_graph_walker: {
             disengage;
         }
 
-        # parse data if we've gotten this far..
-        data = UltramsgAPI.parse_inbound_message(request = self.params);
+        if(not (action_node := here.get_actions().get(action_label='UltramsgAction'))) {
+            Jac.get_context().status = 200;
+            disengage;
+        }
+
+        if(not action_node.enabled) {
+            Jac.get_context().status = 200;
+            disengage;
+        }
+
+        # parse data if we've gotten so far..
+        data = action_node.api().parse_inbound_message(request = self.params);
         if(not data) {
+            Jac.get_context().status = 200;
+            disengage;
+        }
+
+        # ignore loopback messages i.e. messages where sender and receiver are the same
+        if(data['sender'] == data['receiver']) {
+            Jac.get_context().status = 200;
+            disengage;
+        }
+
+        # with message_ack, the sender is the agent and the receiver is the user
+        if(data['event_type'] == 'message_ack') {
+            # if this is human messaging as the AI, author would be set
+            if(data['author']) {
+                frame_node = here.get_memory().get_frame(agent_id = here.id, session_id = data["receiver"], force_session=True);
+                self.logger.debug('inserting human message into AI context');
+                frame_node.add_unprompted_interaction(message = data["body"], channel = "whatsapp");
+            }
+            disengage;
+        }
+
+        # set agent phone number
+        action_node.phone_number = data["receiver"];
+
+        if(action_node.ignore_newsletters and "@newsletter" in data["sender"]) {
             Jac.get_context().status = 200;
             disengage;
         }
@@ -41,7 +75,7 @@ walker ultramsg_interact :interact_graph_walker: {
         if(access_control_action_node := here.get_actions().get(action_label='AccessControlAction')) {
 
             access = access_control_action_node.has_action_access(
-                session_id=data['sender_number'],
+                session_id=data['sender'],
                 action_label='UltramsgAction',
                 channel='whatsapp'
             );
@@ -52,90 +86,55 @@ walker ultramsg_interact :interact_graph_walker: {
             }
         }
 
-        # ignore loopback messages i.e. messages where sender and receiver are the same
-        if(data['sender_number'] == data['agent_number'] or data['from_self']) {
-            Jac.get_context().status = 200;
-            disengage;
+        # init the frame here so we can have it all set up to add the sender info from data
+        # we have to force session to get frame to use the session_id we supply, so we can track whatsapp user by number
+        frame_node = here.get_memory().get_frame(agent_id = here.id, session_id = data["sender"], force_session=True);
+
+        if(action_node.use_pushname) {
+            # grab and save the sender name in a frame variable
+            frame_node.set_user_name(data['pushname']);
         }
 
-        if( action_node := (here.get_actions().get(action_label='UltramsgAction')) ) {
-
-            if(not action_node.enabled) {
-                Jac.get_context().status = 200;
-                disengage;
-            }
-
-            if(action_node.ignore_newsletters and "@newsletter" in data["sender_number"]) {
-                Jac.get_context().status = 200;
-                disengage;
-            }
-
-            # set agent phone number
-            action_node.phone_number = data["agent_number"];
-
-            # let's handle message_ack types here...
-            if(data['event_type'] == 'message_ack') {
-                # if this is a human sending a message via AI's whatsapp, handle it differently here
-                if(data['sender_number'] == action_node.phone_number and data['author'] == action_node.phone_number) {
-
-                    frame_node = here.get_memory().get_frame(agent_id = here.id, session_id = data["agent_number"], force_session=True);
-
-                    self.logger.debug('inserting human message into AI context');
-                    frame_node.add_unprompted_interaction(message = data["body"], channel = "whatsapp");
-                }
-
-                disengage;
-            }
-
-            # init the frame here so we can have it all set up to add the sender info from data
-            # we have to force session to get frame to use the session_id we supply, so we can track whatsapp user by number
-            frame_node = here.get_memory().get_frame(agent_id = here.id, session_id = data["sender_number"], force_session=True);
-
-            if(action_node.use_pushname) {
-                # grab and save the sender name in a frame variable
-                frame_node.set_user_name(data['sender_name']);
-            }
-
-            # handle chat message requests
-            if(data['message_type'] == 'chat') {
-                self.handle_chat_message(
-                    data = data,
-                    agent_node = here,
-                    frame_node = frame_node,
-                    action_node = action_node
-                );
-            }
-
-            # handle voicenote requests
-            if(data['message_type'] in ['ptt']) {
-                self.handle_voicenote_message(
-                    data = data,
-                    agent_node = here,
-                    frame_node = frame_node,
-                    action_node = action_node
-                );
-            }
-
-            # handle media requests
-            if(data['message_type'] in ['audio', 'document', 'image', 'video']) {
-                self.handle_media_message(
-                    data = data,
-                    agent_node = here,
-                    frame_node = frame_node,
-                    action_node = action_node
-                );
-            }
-
-            # handle location requests
-            if(data['message_type'] in ['location']) {
-                self.handle_location_message(
-                    data = data,
-                    agent_node = here,
-                    frame_node = frame_node,
-                    action_node = action_node
-                );
-            }
+        # handle chat message requests
+        if(data['message_type'] == 'chat') {
+            self.handle_chat_message(
+                data = data,
+                agent_node = here,
+                frame_node = frame_node,
+                action_node = action_node
+            );
         }
+
+        # handle voicenote requests
+        if(data['message_type'] in ['ptt']) {
+            self.handle_voicenote_message(
+                data = data,
+                agent_node = here,
+                frame_node = frame_node,
+                action_node = action_node
+            );
+        }
+
+        # handle media requests
+        if(data['message_type'] in ['audio', 'document', 'image', 'video']) {
+            self.handle_media_message(
+                data = data,
+                agent_node = here,
+                frame_node = frame_node,
+                action_node = action_node
+            );
+        }
+
+        # handle location requests
+        if(data['message_type'] in ['location']) {
+            self.handle_location_message(
+                data = data,
+                agent_node = here,
+                frame_node = frame_node,
+                action_node = action_node
+            );
+        }
+
     }
 
     can is_directed_message(data:dict) -> bool {
@@ -143,7 +142,7 @@ walker ultramsg_interact :interact_graph_walker: {
 
         if(data['author']) {
             # this means we are in a group..only respond if the message starts with @[agent name]
-            callout = ( ("@"+data['agent_number']).replace("@c.us", "") ).lower();
+            callout = ( ("@"+data['receiver']).replace("@c.us", "") ).lower();
             callout_index = ((data['body']).lower()).find(callout);
             if( callout_index == -1 ) {
                 # then we ignore unless they are directly calling us out in the group...
@@ -170,7 +169,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_chat", "meta": "dict", "content": data}]
+                data = [{"label": "whatsapp_chat", "meta": {}, "content": data}]
             )).message;
 
             # handle reply
@@ -209,7 +208,7 @@ walker ultramsg_interact :interact_graph_walker: {
                     reporting = False,
                     tts = True,
                     channel = "whatsapp",
-                    data = [{"label": "whatsapp_voicenote", "meta": data['message_type'], "content": data['media']}]
+                    data = [{"label": "whatsapp_voicenote", "meta": {'message_type': data['message_type']}, "content": data['media']}]
                 )).message;
             }
 
@@ -229,7 +228,7 @@ walker ultramsg_interact :interact_graph_walker: {
 
                     if(audio) {
                         # sends audio via ultra message using base64 encoded string
-                        response = UltramsgAPI.send_audio(phone_number=frame_node.session_id, media = audio, api_url = action_node.api_url, api_key = action_node.api_key);
+                        response = action_node.api().send_audio(phone_number=frame_node.session_id, media = audio);
                         has_tts_response = True;
                     }
                 }
@@ -253,7 +252,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_media", "meta": "dict", "content": data}]
+                data = [{"label": "whatsapp_media", "meta": {}, "content": data}]
             )).message;
 
             # handle reply
@@ -276,7 +275,7 @@ walker ultramsg_interact :interact_graph_walker: {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_location", "meta": "dict", "content": data}]
+                data = [{"label": "whatsapp_location", "meta": {}, "content": data}]
             )).message;
 
             # handle reply
