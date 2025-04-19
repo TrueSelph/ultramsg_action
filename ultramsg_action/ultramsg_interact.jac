@@ -1,6 +1,7 @@
 import:py logging;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
+import:py from .modules.ultramsg_api { UltramsgAPI }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.interact { interact }
 import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
@@ -189,6 +190,7 @@ walker ultramsg_interact :interact_graph_walker: {
 
             message = None;
             transcription = None;
+            interact_object = None;
 
             # load stt action
             if(stt_action := agent_node.get_stt_action()) {
@@ -200,7 +202,7 @@ walker ultramsg_interact :interact_graph_walker: {
             }
 
             if(transcription) {
-                message = (root spawn interact(
+                interact_object = (root spawn interact(
                     utterance = transcription,
                     agent_id = agent_node.id,
                     session_id = frame_node.session_id,
@@ -209,33 +211,31 @@ walker ultramsg_interact :interact_graph_walker: {
                     tts = True,
                     channel = "whatsapp",
                     data = [{"label": "whatsapp_voicenote", "meta": {'message_type': data['message_type']}, "content": data['media']}]
-                )).message;
+                ));
             }
 
             # now we grab the response and send it
-            if(message) {
+            if(interact_object) {
 
                 has_tts_response = False;
-                parent_message_id = message.get_meta('parent_message_id');
+                parent_message_id = interact_object.message.get_meta('parent_message_id');
 
-                if(tts_action := agent_node.get_tts_action()) {
+                # check for TTS result in interact_object since tts flag was set to True
+                audio_url = interact_object.response.get('response', {}).get('audio_url');
 
-                    # synthesize an audio for the user, cater to phoneme_message, if available
-                    content = message.get_meta('phoneme_content') or message.get_content();
+                if(audio_url) {
+                    audio_base64 = UltramsgAPI.file_url_to_base64(audio_url);
+                    # sends audio via message using base64
+                    response = action_node.api().send_audio(phone_number=frame_node.session_id, media = audio_base64);
 
-                    # perform TTS
-                    audio = tts_action.invoke(text=content, as_base64=True);
-
-                    if(audio) {
-                        # sends audio via ultra message using base64 encoded string
-                        response = action_node.api().send_audio(phone_number=frame_node.session_id, media = audio);
+                    if response.get("sent") == 'true' {
                         has_tts_response = True;
                     }
                 }
 
                 if(not has_tts_response) {
                     # fall back on text reply if no tts response generated
-                    action_node.send_message(session_id=frame_node.session_id, message=message);
+                    action_node.send_message(session_id=frame_node.session_id, message=interact_object.message);
                 }
 
             }

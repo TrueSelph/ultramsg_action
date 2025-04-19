@@ -1,5 +1,6 @@
 """API module for interacting with the Ultramsg API."""
 
+import base64
 import logging
 from typing import Optional
 
@@ -275,3 +276,18 @@ class UltramsgAPI:
         """Restarts the instance."""
         data = {"token": self.token}
         return self.send_rest_request(endpoint="instance/restart", data=data)
+
+    @staticmethod
+    def file_url_to_base64(file_url: str) -> Optional[str]:
+        """
+        Downloads file from any web-URL and encodes contents as base64.
+        Does not store the file to any persistent file or storage backend.
+        """
+        try:
+            response = requests.get(file_url)
+            response.raise_for_status()
+            encoded = base64.b64encode(response.content).decode("utf-8")
+            return encoded
+        except Exception as ex:
+            UltramsgAPI.logger.error(f"Error downloading or encoding file: {ex}")
+            return None
