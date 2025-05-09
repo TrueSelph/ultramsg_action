@@ -33,7 +33,7 @@ def render(router: StreamlitRouter, agent_id: str, action_id: str, info: dict) -
         # Register Webhook button
         if st.button("Register Webhook", key=f"{model_key}_btn_register_webhook"):
             result = call_action_walker_exec(
-                agent_id, module_root, "register_ultramsg_webhook", {}
+                agent_id, module_root, "register_session", {}
             )
 
             if result:
