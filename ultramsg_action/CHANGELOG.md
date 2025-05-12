@@ -15,4 +15,5 @@
 - Bugfix: patched duplicate call to TTS service following interact TTS flag update
 
 ## 0.0.5
-- Refactor API
+- Refactored API update they python module by passing params to the class
+- Added outbox scheduling functionality
