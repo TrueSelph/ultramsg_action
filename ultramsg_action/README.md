@@ -107,7 +107,7 @@ These guidelines help optimize performance and ensure compliance with WhatsApp's
 {
    "agent_id": "<AGENT_ID>",
    "walker": "broadcast_message",
-   "module_root": "actions.jivas.wppconnect_action",
+   "module_root": "actions.jivas.ultramsg_action",
    "args": {
       "message": {
          "message_type": "TEXT|MEDIA|MULTI",
