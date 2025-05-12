@@ -142,7 +142,6 @@ node UltramsgAction :Action: {
     }
 
     can register_session() -> dict {
-        self.logger.warning(f"Ultramsg webhook registration result");
         # setup procedure for webhook registration on api
 
         result = {};
@@ -158,7 +157,7 @@ node UltramsgAction :Action: {
             self.logger.debug(f'Ultramsg webhook url: {self.webhook_url}');
 
             result = self.api().register_session(webhook_url = self.webhook_url);
-            self.logger.warning(f"Ultramsg webhook registration result: {result}");
+            self.logger.debug(f"Ultramsg webhook registration result: {result}");
 
             if('error' in result) {
                 return False;

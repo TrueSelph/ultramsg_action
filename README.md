@@ -13,6 +13,7 @@ JIVAS action wrapper for WhatsApp API communications using the Ultramsg API.
 - **Name:** `jivas/ultramsg_action`
 - **Author:** [V75 Inc.](https://v75inc.com/)
 - **Architype:** `UltramsgAction`
+- **Version:** 0.0.5
 
 ## Meta Information
 
