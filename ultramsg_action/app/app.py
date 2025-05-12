@@ -19,7 +19,7 @@ def render(router: StreamlitRouter, agent_id: str, action_id: str, info: dict) -
     # Add application header controls
     (model_key, module_root) = app_header(agent_id, action_id, info)
 
-    with st.expander("WPPConnect Configuration", expanded=False):
+    with st.expander("Ultramsg Configuration", expanded=False):
         # Add main app controls
         app_controls(agent_id, action_id)
         # Add update button to apply changes
