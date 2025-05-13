@@ -3,32 +3,27 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/TrueSelph/ultramsg_action)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TrueSelph/ultramsg_action/test-action.yaml)
 ![GitHub issues](https://img.shields.io/github/issues/TrueSelph/ultramsg_action)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/ultramsg_action)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/TrueSelph/ultramsg_action)
 ![GitHub](https://img.shields.io/github/license/TrueSelph/ultramsg_action)
 
-JIVAS action wrapper for WhatsApp API communications using the Ultramsg API.
+
 
 ## Package Information
-
 - **Name:** `jivas/ultramsg_action`
 - **Author:** [V75 Inc.](https://v75inc.com/)
 - **Architype:** `UltramsgAction`
 
 ## Meta Information
-
 - **Title:** Ultramsg Action
 - **Group:** core
 - **Type:** action
 
 ## Configuration
-
 - **Singleton:** true
 
 ## Dependencies
-
-- **Jivas:** `^2.0.0`
-
-This package, developed by V75 Inc., provides a JIVAS action wrapper for WhatsApp API communications using the Ultramsg API. As a core action, it simplifies and streamlines interactions with WhatsApp. The package is a singleton and requires the Jivas library version 2.0.0.
+- **Jivas:** `~2.0.0-aplha.40`
+- **PulseAction:** `~0.0.2`
 
 ---
 
@@ -44,23 +39,183 @@ The Ultramsg Action provides an abstraction layer for interacting with WhatsApp 
 - **Message broadcasting** to multiple recipients.
 - **Integration** with Ultramsg for sending text, media, and location messages.
 
+### Dynamic Adaptation
+
+The Ultramsg Action includes advanced mechanisms to optimize message delivery:
+
+- **Automatic Interval Adjustment**: Dynamically modifies send intervals based on success rates to ensure efficient delivery.
+- **Variable Batch Sizes**: Alternates batch sizes between defined minimum and maximum values for flexibility.
+- **Random Jitter**: Introduces slight randomness to sending intervals to prevent detection of predictable patterns.
+
+These features enhance reliability and minimize disruptions during high-volume messaging operations.
+
 ---
 
 ### Configuration Structure
 
-The configuration consists of the following components:
+To use the Ultramsg Action, you need to set up the following configuration parameters. These specify connection and behavioral details.
 
-### `webhook_properties`
+| Parameter                     | Type   | Description                                                                         | Default |
+| ----------------------------- | ------ | ----------------------------------------------------------------------------------- | ------- |
+| `api_url`                     | string | The base URL of the Ultramsg API.                                                    | `"https://api.ultramsg.com"`    |
+| `instance_id`                 | string | The instance ID for the Ultramsg API.                                                | `""`    |
+| `token`                       | string | The token for accessing the Ultramsg API.                                            | `""`    |
+| `phone_number`                | string | The whatsapp phone number.                                                          | `""`    |
+| `base_url`                    | string | The base URL of the JIVAS instance.                                                  | `""`    |
+| `webhook_url`                 | string | The generated webhook URL.                                                          | `""`    |
+| `webhook_properties`          | dict   | Settings for the webhook, such as message handling and delays.                       | `{"send_delay": 3, "webhook_message_received": "True", "webhook_message_create": "False", "webhook_message_ack": "True", "webhook_message_download_media": "True"}` |
+| `chunk_length`                | int    | The maximum length of message to send. Longer texts are split into subsequent messages. | `3500`  |
+| `use_pushname`                | bool   | Use the WhatsApp push name as the user name when set to `True`.                         | `True`  |
+| `ignore_newsletters`          | bool   | Ignore newsletter messages when set to `True`.                                        | `True`  |
+| `request_timeout`             | float  | Length of time (in seconds) this action waits for the API to complete a request.      | `10.0`  |
+| `outbox_base_rate_per_minute` | int    | The base messages per minute (adapts dynamically).                                    | `20`    |
+| `outbox_send_interval`        | float  | The current operational delay between batches.                                        | `1.0`   |
+| `outbox_min_send_interval`    | float  | The absolute minimum delay (seconds).                                                 | `1.0`   |
+| `outbox_max_send_interval`    | float  | The maximum allowed delay (seconds).                                                  | `10.0`  |
+| `outbox_min_batch_size`       | int    | The minimum batch size of messages to send from the outbox.                            | `1`     |
+| `outbox_max_batch_size`       | int    | The maximum batch size of messages to send from the outbox.                            | `10`    |
 
-Defines the settings for the webhook, such as message handling and delays.
+---
 
-```python
-webhook_properties = {
-    "send_delay": 3,
-    "webhook_message_received": "True",
-    "webhook_message_create": "False",
-    "webhook_message_ack": "True",
-    "webhook_message_download_media": "True"
+### Notes on Configuration
+
+- **Parameter Settings**: Ensure all parameters are configured based on your Ultramsg Server and JIVAS deployment requirements.
+- **Webhook URL**: The `webhook_url` must be a publicly accessible endpoint to enable event-driven communication from Ultramsg.
+- **Outbox Base Rate**: Set `outbox_base_rate_per_minute` to `20` for new numbers. This value should align with WhatsApp's acceptable rate-per-minute limits (default is `20`).
+- **Auto Callback**: This when sending or broadcasting messages in batches, this action will trigger your supplied callback upon completion.
+- **Batch Size Limits**: For Tier 2 accounts, keep `outbox_max_batch_size` at or below `10` to comply with account limitations.
+- **Validation**: Validate your API keys, tokens, and webhook URLs before deploying in production.
+- **Chunk Length**: Adjust `chunk_length` if you have use cases that involve very long text messages.
+- **Message Filtering**: Use `ignore_newsletters` and `ignore_forwards` to filter out less relevant messages and avoid unnecessary processing.
+
+These guidelines help optimize performance and ensure compliance with WhatsApp's messaging policies.
+
+---
+
+
+## API Endpoints
+
+### Broadcast Message
+
+**Endpoint:** `/action/walker`
+**Method:** `POST`
+
+#### Parameters
+
+```json
+{
+   "agent_id": "<AGENT_ID>",
+   "walker": "broadcast_message",
+   "module_root": "actions.jivas.ultramsg_action",
+   "args": {
+      "message": {
+         "message_type": "TEXT|MEDIA|MULTI",
+         ...
+      },
+      "ignore_list": ["session_id_1", ...]
+   }
+}
+```
+
+---
+
+### Send Messages
+
+**Endpoint:** `/action/walker`
+**Method:** `POST`
+
+#### Parameters
+
+```json
+{
+   "agent_id": "<AGENT_ID>",
+   "walker": "send_messages",
+   "module_root": "actions.jivas.ultramsg_action",
+   "args": {
+      "messages": [
+         // Array of message objects
+      ],
+      "callback_url": "https://your-callback.url"
+   }
+}
+```
+
+#### Example Request
+
+```json
+{
+   "messages": [
+      {
+         "to": "session_id",
+         "message": {
+            "message_type": "TEXT",
+            "content": "Batch message"
+         }
+      }
+   ],
+   "callback_url": "https://example.com/status"
+}
+```
+
+#### Response
+
+Returns a job ID string for tracking.
+
+#### Callback Response
+
+Your callback will receive a JSON payload with the following structure automatically upon job completion:
+
+```json
+{
+   "status": "success|partial|error",
+   "job_id": "<UUID>",
+   "processed_count": 10,
+   "failed_count": 2,
+   "pending_count": 0
+}
+```
+
+---
+
+### Message Formats
+
+#### TEXT
+
+```json
+{
+   "message": {
+      "message_type": "TEXT",
+      "content": "Hello World"
+   }
+}
+```
+
+#### MEDIA
+
+```json
+{
+   "message": {
+      "message_type": "MEDIA",
+      "mime": "image/jpeg",
+      "content": "Check this!",
+      "data": {
+         "url": "https://example.com/image.jpg",
+         "file_name": "image.jpg"
+      }
+   }
+}
+```
+
+#### MULTI
+
+```json
+{
+   "message": {
+      "message_type": "MULTI",
+      "content": [
+         // Array of TEXT/MEDIA messages
+      ]
+   }
 }
 ```
 

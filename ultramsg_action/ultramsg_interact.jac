@@ -269,7 +269,7 @@ walker ultramsg_interact :interact_graph_walker: {
         # add document resource to data node in interaction
         if(self.is_directed_message(data)) {
             message = (root spawn interact(
-                utterance = "The user sent their location.",
+                utterance = data['caption'] if data['caption'] else f'sent {data['message_type']} file in the chat',
                 agent_id = agent_node.id,
                 session_id = frame_node.session_id,
                 verbose = False,
