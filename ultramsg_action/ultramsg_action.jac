@@ -1,20 +1,20 @@
-import:py os;
-import:py uuid;
-import:py logging;
-import:py traceback;
-import:py random;
-import:py from typing { Union }
-import:py from logging { Logger }
-import:py from datetime { datetime }
-import:py from .modules.ultramsg_api { UltramsgAPI }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from jvserve.lib.agent_interface { AgentInterface }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.memory.interaction_response {
+import os;
+import uuid;
+import logging;
+import traceback;
+import random;
+import from typing { Union }
+import from logging { Logger }
+import from datetime { datetime }
+import from .modules.ultramsg_api { UltramsgAPI }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jvserve.lib.agent_interface { AgentInterface }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.memory.interaction_response {
     MessageType, InteractionMessage, TextInteractionMessage, MediaInteractionMessage, MultiInteractionMessage
 }
 
-node UltramsgAction :Action: {
+node UltramsgAction(Action) {
     # houses configurations per agent for whatsapp api communications provided by ultramsg api
 
     # set up logger
@@ -35,23 +35,23 @@ node UltramsgAction :Action: {
     # outbox settings
     has outbox_base_rate_per_minute:int = 20;  # WhatsApp API rate limit for sending messages
     has outbox_send_interval:float = 1.0; # the interval (delay) in seconds between sending messages from the outbox
-    has outbox_min_send_interval:float = 1.0; # the minumum interval (delay) in seconds between sending messages from the outbox
+    has outbox_min_send_interval:float = 1.0; # the minimum interval (delay) in seconds between sending messages from the outbox
     has outbox_max_send_interval:float = 10.0; # the maximum interval (delay) in seconds between sending messages from the outbox
     has outbox_min_batch_size:int = 1; # the minimum batch size of messages to send from the outbox
     has outbox_max_batch_size:int = 10; # the maximum batch size of messages to send from the outbox
     has outbox:dict = {}; # outbox for outgoing mass messages
 
 
-    can on_enable() {
+    def on_enable() {
         self.on_register();
         self.start_outbox_scheduler();
     }
 
-    can on_disable() {
+    def on_disable() {
         self.stop_outbox_scheduler();
     }
 
-    can on_register {
+    def on_register {
 
         if (not self.base_url) {
             # default to jivas base url in environment
@@ -61,12 +61,12 @@ node UltramsgAction :Action: {
         self.register_session();
     }
 
-    can post_register() {
+    def post_register() {
         # post register procedure to start the outbox scheduler
         self.start_outbox_scheduler();
     }
 
-    can pulse() {
+    def pulse() {
         # Main scheduling pulse with adaptive rate control
         if not self.has_outbox_items() {
             self.stop_outbox_scheduler();
@@ -94,7 +94,7 @@ node UltramsgAction :Action: {
         }
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
         try {
             if(not self.api_url) {
                 return {
@@ -128,7 +128,7 @@ node UltramsgAction :Action: {
     }
 
 
-    can api() -> UltramsgAPI {
+    def api() -> UltramsgAPI {
         # load the ultramsg api instance
 
         return UltramsgAPI(
@@ -141,7 +141,7 @@ node UltramsgAction :Action: {
 
     }
 
-    can register_session() -> dict {
+    def register_session() -> dict {
         # setup procedure for webhook registration on api
 
         result = {};
@@ -171,16 +171,16 @@ node UltramsgAction :Action: {
         return True;
     }
 
-    can logout_session() {
+    def logout_session() {
         self.api().logout_session();
         return True;
     }
 
-    can sanitize_message(message:str) {
+    def sanitize_message(message:str) {
         return message.replace("**", "*").replace("<br/>", "\n").replace("<b>", "*").replace("</b>", "*");
     }
 
-    can send_message(session_id:str, message:InteractionMessage, parent_message_id:str = "") -> dict {
+    def send_message(session_id:str, message:InteractionMessage, parent_message_id:str = "") -> dict {
         # processes an agent response payload format and sends an ultramsg message to a specified session_id via the action
         result = {};
 
@@ -240,7 +240,7 @@ node UltramsgAction :Action: {
         return result;
     }
 
-    can prepare_interaction_message(message:dict) -> InteractionMessage {
+    def prepare_interaction_message(message:dict) -> InteractionMessage {
         # prepare the interaction message based on the message type
         if not message {
             return None;
@@ -264,7 +264,7 @@ node UltramsgAction :Action: {
         return interaction_message;
     }
 
-    can broadcast_message(message:InteractionMessage, ignore_list:list = []) -> str {
+    def broadcast_message(message:InteractionMessage, ignore_list:list = []) -> str {
         # processes an agent response payload format and sends a message to all session_ids via the action
 
         agent_node = self.get_agent();
@@ -293,14 +293,14 @@ node UltramsgAction :Action: {
 
     # --------------- OUTBOX SCHEDULER ----------------
 
-    can restart_scheduler() {
+    def restart_scheduler() {
         # Gracefully update scheduler with new parameters
         self.stop_outbox_scheduler();
         self.start_outbox_scheduler();
         self.logger.debug(f"Outbox scheduler restarted with interval {self.outbox_send_interval}s");
     }
 
-    can has_outbox_items() -> bool {
+    def has_outbox_items() -> bool {
         # check if there are any items in the outbox
         if self.outbox and len(self.outbox) > 0 {
             for (job_id, job) in self.outbox.items() {
@@ -312,7 +312,7 @@ node UltramsgAction :Action: {
         return False;
     }
 
-    can start_outbox_scheduler() {
+    def start_outbox_scheduler() {
 
         # Proceed with scheduler start
         if self.has_outbox_items() {
@@ -329,7 +329,7 @@ node UltramsgAction :Action: {
         }
     }
 
-    can stop_outbox_scheduler() {
+    def stop_outbox_scheduler() {
         # stop the outbox scheduler
 
         if(pulse_action := self.get_agent().get_action(action_label="PulseAction")) {
@@ -339,7 +339,7 @@ node UltramsgAction :Action: {
         }
     }
 
-    can send_from_outbox(batch_size: int = 1) -> (int, int, int) {
+    def send_from_outbox(batch_size: int = 1) -> (int, int, int) {
         # Enhanced batch processing with success tracking
         if not self.has_outbox_items() {
             return (0, 0, 0);
@@ -399,7 +399,7 @@ node UltramsgAction :Action: {
         return (processed_count, success_count, failure_count);
     }
 
-    can update_interaction_context(item:dict, message:InteractionMessage) {
+    def update_interaction_context(item:dict, message:InteractionMessage) {
         # Shared context update logic
         agent_node = self.get_agent();
         frame_node = agent_node.get_memory().get_frame(
@@ -413,7 +413,7 @@ node UltramsgAction :Action: {
         );
     }
 
-    can add_outbox_job(messages: list, callback_url: str = "") -> str {
+    def add_outbox_job(messages: list, callback_url: str = "") -> str {
         # Adds a batch of messages to the outbox with comprehensive validation
         # Returns job ID if successful, empty string if no valid messages
 
@@ -466,7 +466,7 @@ node UltramsgAction :Action: {
         return job_id;
     }
 
-    can validate_message_item(item: dict, index: int, error_log: list) -> bool {
+    def validate_message_item(item: dict, index: int, error_log: list) -> bool {
         # Validates individual message items with detailed error reporting
         required_keys = {'to', 'message'};
         message_types = {'TEXT', 'MEDIA', 'MULTI'};
@@ -504,7 +504,7 @@ node UltramsgAction :Action: {
         return True;
     }
 
-    can validate_text_message(message: dict, index: int) -> bool {
+    def validate_text_message(message: dict, index: int) -> bool {
         if not message.get('content') {
             self.logger.error(f"Item {index}: TEXT message missing content");
             return False;
@@ -512,7 +512,7 @@ node UltramsgAction :Action: {
         return True;
     }
 
-    can validate_media_message(message: dict, index: int) -> bool {
+    def validate_media_message(message: dict, index: int) -> bool {
         required = {'mime', 'content', 'data'};
         missing = required - message.keys();
 
@@ -528,7 +528,7 @@ node UltramsgAction :Action: {
         return True;
     }
 
-    can validate_multi_message(message: dict, index: int) -> bool {
+    def validate_multi_message(message: dict, index: int) -> bool {
         components = message.get('content', []);
 
         if not isinstance(components, list) or len(components) < 2 {
@@ -545,7 +545,7 @@ node UltramsgAction :Action: {
         return True;
     }
 
-    can create_job_structure(callback_url: str = "") -> dict {
+    def create_job_structure(callback_url: str = "") -> dict {
         # Returns standardized job structure with metadata
         return {
             'pending': {},
@@ -560,7 +560,7 @@ node UltramsgAction :Action: {
         };
     }
 
-    can add_outbox_item(job_id: str, session_id: str, message: InteractionMessage) {
+    def add_outbox_item(job_id: str, session_id: str, message: InteractionMessage) {
         # Adds validated item to specified job with type checking
 
         if not all([
@@ -588,7 +588,7 @@ node UltramsgAction :Action: {
         self.outbox[job_id]['stats']['total'] += 1;
     }
 
-    can maybe_trigger_callback(job_id:str, job:dict) {
+    def maybe_trigger_callback(job_id:str, job:dict) {
         # Unified callback handler
         if not job['pending'] and job.get('callback_url') {
             status = 'success' if not job['failed'] else 'partial';
@@ -607,12 +607,12 @@ node UltramsgAction :Action: {
         }
     }
 
-    can clamp(value:Union[int,float], min_val:Union[int,float], max_val:Union[int,float]) -> Union[int,float] {
+    def clamp(value:Union[int,float], min_val:Union[int,float], max_val:Union[int,float]) -> Union[int,float] {
         # Utility function for boundary constraints
         return max(min_val, min(value, max_val));
     }
 
-    can calculate_dynamic_batch_size() -> int {
+    def calculate_dynamic_batch_size() -> int {
         # Calculate batch size based on success rate and current interval
         base_size = max(1, int(self.outbox_base_rate_per_minute * (self.outbox_send_interval / 60)));
 
@@ -623,7 +623,7 @@ node UltramsgAction :Action: {
         return self.clamp(int(jittered_size), self.outbox_min_batch_size, self.outbox_max_batch_size);
     }
 
-    can update_send_parameters(successes: int, failures: int) {
+    def update_send_parameters(successes: int, failures: int) {
         # Adaptive rate control algorithm
         total = successes + failures;
         success_rate = successes / total if total > 0 else 1.0;

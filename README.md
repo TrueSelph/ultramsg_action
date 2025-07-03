@@ -22,8 +22,8 @@
 - **Singleton:** true
 
 ## Dependencies
-- **Jivas:** `~2.0.0-aplha.40`
-- **PulseAction:** `~0.0.2`
+- **Jivas:** `~2.1.0`
+- **PulseAction:** `~0.1.0`
 
 ---
 

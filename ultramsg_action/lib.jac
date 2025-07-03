@@ -1,6 +1,8 @@
-include:jac ultramsg_action;
-include:jac ultramsg_interact;
-include:jac register_session;
-include:jac logout_session;
-include:jac send_messages;
-include:jac broadcast_message;
+import from actions.jivas.ultramsg_action {
+    ultramsg_action,
+    ultramsg_interact,
+    register_session,
+    logout_session,
+    send_messages,
+    broadcast_message
+}

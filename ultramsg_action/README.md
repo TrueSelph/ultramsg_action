@@ -7,12 +7,12 @@
 ![GitHub](https://img.shields.io/github/license/TrueSelph/ultramsg_action)
 
 
-JIVAS action wrapper for WhatsApp API communications using the Ultramsg API with advanced mass messaging outbox. This action provides a wrapper for WhatsApp API communications using the [Ultramsg API](https://user.ultramsg.com). As a core action, it simplifies and streamlines interactions with WhatsApp. The package is a singleton and requires the Jivas library version ^2.0.0.
+JIVAS action wrapper for WhatsApp API communications using the Ultramsg API with advanced mass messaging outbox. This action provides a wrapper for WhatsApp API communications using the [Ultramsg API](https://user.ultramsg.com). As a core action, it simplifies and streamlines interactions with WhatsApp. The package is a singleton and requires the Jivas library version ^2.1.0.
 
 ## Package Information
 - **Name:** `jivas/ultramsg_action`
 - **Author:** [V75 Inc.](https://v75inc.com/)
-- **Architype:** `UltramsgAction`
+- **archetype:** `UltramsgAction`
 
 ## Meta Information
 - **Title:** Ultramsg Action
@@ -23,8 +23,8 @@ JIVAS action wrapper for WhatsApp API communications using the Ultramsg API with
 - **Singleton:** true
 
 ## Dependencies
-- **Jivas:** `~2.0.0-aplha.40`
-- **PulseAction:** `~0.0.2`
+- **Jivas:** `~2.1.0`
+- **PulseAction:** `~0.1.0`
 
 ---
 
