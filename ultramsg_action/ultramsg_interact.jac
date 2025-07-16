@@ -4,14 +4,14 @@ import from jivas.agent.modules.agentlib.utils { Utils }
 import from .modules.ultramsg_api { UltramsgAPI }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.interact { interact }
-import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.memory { Memory }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 
-walker ultramsg_interact(interact_graph_walker) {
+walker ultramsg_interact(agent_graph_walker) {
     # called via a webhook whenever there are verification requests or inbound messages
     # when activated, it will trigger the whatsapp interact action to communicate
 
@@ -172,7 +172,7 @@ walker ultramsg_interact(interact_graph_walker) {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_chat", "meta": {}, "content": data}]
+                data = {"whatsapp_chat": data}
             )).message;
 
             # handle reply
@@ -212,7 +212,7 @@ walker ultramsg_interact(interact_graph_walker) {
                     reporting = False,
                     tts = True,
                     channel = "whatsapp",
-                    data = [{"label": "whatsapp_voicenote", "meta": {'message_type': data['message_type']}, "content": data['media']}]
+                    data = {"whatsapp_voicenote": data['media']}
                 ));
             }
 
@@ -220,7 +220,7 @@ walker ultramsg_interact(interact_graph_walker) {
             if(interact_object) {
 
                 has_tts_response = False;
-                parent_message_id = interact_object.message.get_meta('parent_message_id');
+                parent_message_id = interact_object.message.data_get('parent_message_id');
 
                 # check for TTS result in interact_object since tts flag was set to True
                 audio_url = interact_object.response.get('response', {}).get('audio_url');
@@ -254,7 +254,7 @@ walker ultramsg_interact(interact_graph_walker) {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_media", "meta": {}, "content": data}]
+                data = {"whatsapp_media": data}
             )).message;
 
             # handle reply
@@ -277,7 +277,7 @@ walker ultramsg_interact(interact_graph_walker) {
                 verbose = False,
                 reporting = False,
                 channel = "whatsapp",
-                data = [{"label": "whatsapp_location", "meta": {}, "content": data}]
+                data = {"whatsapp_location": data}
             )).message;
 
             # handle reply

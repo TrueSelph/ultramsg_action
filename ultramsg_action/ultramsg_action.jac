@@ -187,7 +187,7 @@ node UltramsgAction(Action) {
         if(message and session_id) {
 
             if(not parent_message_id) {
-                parent_message_id = message.get_meta('parent_message_id');
+                parent_message_id = message.data_get('parent_message_id');
             }
 
             if (message.get_type() == MessageType.SILENCE.value) {}
