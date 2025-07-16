@@ -153,7 +153,7 @@ node UltramsgAction(Action) {
 
         if(self.base_url and self.api_url and webhook_key) {
             # complete the full webhook url
-            self.webhook_url = f'{self.base_url}/webhook/{webhook_key}';
+            self.webhook_url = f'{self.base_url}/action/webhook/{webhook_key}';
             self.logger.debug(f'Ultramsg webhook url: {self.webhook_url}');
 
             result = self.api().register_session(webhook_url = self.webhook_url);
