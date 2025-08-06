@@ -17,3 +17,6 @@
 ## 0.0.5
 - Refactored API update they python module by passing params to the class
 - Added outbox scheduling functionality
+
+## 0.1.0
+- Updated to support Jivas 2.1.0
