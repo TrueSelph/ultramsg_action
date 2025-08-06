@@ -1,17 +1,16 @@
 import logging;
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
 import from .modules.ultramsg_api { UltramsgAPI }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.interact { interact }
-import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.action_webhook_walker { action_webhook_walker }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.memory { Memory }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 
-walker ultramsg_interact(agent_graph_walker) {
+walker ultramsg_interact(action_webhook_walker) {
     # called via a webhook whenever there are verification requests or inbound messages
     # when activated, it will trigger the whatsapp interact action to communicate
 
